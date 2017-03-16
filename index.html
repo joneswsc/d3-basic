@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.axis--x path {
+  /*display: none;*/
+}
+
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 1px;
+}
+
+</style>
+<svg width="960" height="500"></svg>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src='./node_modules/moment/moment.js'></script>
+<script>
+
+async function main() {
+  var svg = d3.select("svg"),
+      margin = {top: 20, right: 20, bottom: 30, left: 50},
+      width = +svg.attr("width") - margin.left - margin.right,
+      height = +svg.attr("height") - margin.top - margin.bottom,
+      g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  var parseTime = d3.timeParse("%d-%b-%y");
+
+  var x = d3.scaleTime()
+    .rangeRound([0, width]);
+  var y = d3.scaleLinear()
+    .rangeRound([height, 0]);
+  var line = d3.line()
+    .x(function(d) { return x(d.d); })
+    .y(function(d) { return y(d.value); });
+
+  let asset_id = 'ltn20230101';
+  const response = await fetch('https://api.verios.com.br/assets/' + asset_id + '/dailies?asc=d');
+  let data = await response.json();
+
+  data.forEach(d => {
+    d.d = moment(d.d.match(/[0-9]+-[0-9]+-[0-9]+/)[0]);
+    d.value = d.j;
+    d.origin = 'real';
+  });
+
+  x.domain(d3.extent(data, function(d) { return d.d; }));
+  y.domain(d3.extent(data, function(d) { return d.value; }));
+
+  g.append("g")
+  .attr("class", "axis axis--x")
+  .attr("transform", "translate(0," + height + ")")
+  .call(d3.axisBottom(x));
+
+  g.append("g")
+  .attr("class", "axis axis--y")
+  .call(d3.axisLeft(y))
+  .append("text")
+  .attr("fill", "#000")
+  .attr("transform", "rotate(-90)")
+  .attr("y", 6)
+  .attr("dy", "0.71em")
+  .style("text-anchor", "end")
+  .text("Price ($)");
+
+  g.selectAll('serie')
+  .data([data])
+  .enter()
+  .append("path")
+  .attr("class", "line")
+  .attr("d", line);
+}
+
+main()
+
+
+</script>
